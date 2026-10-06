@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NearMitra Modern Design System */
+
+@layer base {
+  :root {
+    /* Core Colors - Modern & Clean */
+    --background: 195 20% 97%;
+    --foreground: 200 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 25% 10%;
+
+    /* Primary - Teal (from logo #1B8494) */
+    --primary: 189 69% 34%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft warm gray */
+    --secondary: 195 15% 95%;
+    --secondary-foreground: 200 25% 20%;
+
+    /* Muted */
+    --muted: 195 12% 92%;
+    --muted-foreground: 200 10% 45%;
+
+    /* Accent - Orange (from logo #F57E28) */
+    --accent: 24 92% 56%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Success - Green */
+    --success: 152 69% 40%;
+    --success-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* WhatsApp Green */
+    --whatsapp: 142 70% 45%;
+    --whatsapp-foreground: 0 0% 100%;
+
+    /* Service Colors */
+    --service-electric: 45 93% 47%;
+    --service-wood: 25 76% 45%;
+    --service-water: 200 85% 50%;
+    --service-paint: 340 75% 55%;
+    --service-cool: 190 80% 50%;
+    --service-clean: 160 60% 45%;
+
+    --border: 200 15% 90%;
+    --input: 200 15% 90%;
+    --ring: 189 69% 34%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+/* ── Custom Keyframes ──────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@layer components {
+  /* ── Buttons ──────────────────────────────────────────────────────── */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-md hover:shadow-xl active:scale-95;
+    background-image: linear-gradient(135deg, hsl(189 69% 38%), hsl(189 69% 28%));
+  }
+  .btn-primary:hover {
+    background-image: linear-gradient(135deg, hsl(189 69% 42%), hsl(189 69% 32%));
+    transform: translateY(-1px);
+  }
+
+  .btn-accent {
+    @apply bg-accent text-accent-foreground font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-md hover:shadow-xl active:scale-95;
+    background-image: linear-gradient(135deg, hsl(24 92% 60%), hsl(24 92% 48%));
+  }
+  .btn-accent:hover {
+    background-image: linear-gradient(135deg, hsl(24 92% 64%), hsl(24 92% 52%));
+    transform: translateY(-1px);
+  }
+
+  .btn-whatsapp {
+    @apply text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-md hover:shadow-xl active:scale-95;
+    background-image: linear-gradient(135deg, hsl(142 70% 49%), hsl(142 70% 38%));
+  }
+  .btn-whatsapp:hover {
+    background-image: linear-gradient(135deg, hsl(142 70% 52%), hsl(142 70% 42%));
+    transform: translateY(-1px);
+  }
+
+  .btn-success {
+    @apply text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95;
+    background-image: linear-gradient(135deg, hsl(152 69% 44%), hsl(152 69% 34%));
+  }
+
+  .btn-danger {
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95;
+  }
+
+  .btn-voice {
+    @apply text-primary-foreground font-bold py-5 px-8 rounded-2xl transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 text-lg;
+    background-image: linear-gradient(135deg, hsl(189 69% 38%), hsl(189 69% 28%));
+  }
+
+  /* ── Cards ────────────────────────────────────────────────────────── */
+  .service-card {
+    @apply bg-card rounded-2xl p-5 shadow-md border border-border/40 cursor-pointer transition-all duration-400;
+  }
+  .service-card:hover {
+    @apply shadow-xl border-primary/20;
+    transform: translateY(-4px);
+  }
+
+  .provider-card {
+    @apply bg-card rounded-3xl p-6 shadow-xl border-2 border-border;
+  }
+
+  /* ── Glassmorphism utility ────────────────────────────────────────── */
+  .glass {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-dark {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* ── Inputs ───────────────────────────────────────────────────────── */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-300;
+  }
+
+  /* ── Typography ───────────────────────────────────────────────────── */
+  .section-title {
+    @apply text-2xl md:text-3xl font-bold text-foreground;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(189 69% 34%), hsl(189 69% 24%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Bottom Tab Bar ─────────────────────────────────────────────── */
+  .sticky-bottom-bar {
+    @apply fixed bottom-0 left-0 right-0 z-50;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ── Animations ───────────────────────────────────────────────────── */
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.4s ease-out forwards;
+  }
+
+  .animate-slide-down {
+    animation: slide-down 0.3s ease-out forwards;
+  }
+
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .duration-400 {
+    transition-duration: 400ms;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

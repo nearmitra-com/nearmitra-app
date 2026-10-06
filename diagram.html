@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> NearMitra Diagrams</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; background-color: #f8fafc; text-align: center; }
+        h1 { color: #0f172a; margin-bottom: 20px; }
+        .container { 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            padding: 40px; 
+            margin-bottom: 50px; 
+            display: inline-block; 
+            background: white; 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1> NearMitra Project Diagrams</h1>
+    <p>For your project report! Double-click this file to open in your browser, then screenshot these.</p>
+
+    <h2>1. Start-to-End System Flowchart</h2>
+    <p style="color: #64748b; font-size: 14px;">(Standard Logic Flowchart with Decisions for Reports)</p>
+    <div class="container" style="width: 90%;">
+        <div class="mermaid">
+            flowchart TD
+                %% Styling
+                classDef term fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px,border-radius:50%
+                classDef decision fill:#fef08a,stroke:#eab308,stroke-width:2px
+                classDef process fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                classDef database fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
+
+                %% Nodes
+                Start([Start: User accesses Platform]):::term
+                IsRegistered{Is User Registered?}:::decision
+                Register[Register Account]:::process
+                Login[User Login]:::process
+                
+                RoleCheck{Check User Role}:::decision
+                
+                %% Customer Flow
+                CustBrowse[Browse Services]:::process
+                CustBook[Submit Booking Request]:::process
+                DbPending[(DB Status: PENDING)]:::database
+                CustTrack[Customer Tracks Request]:::process
+                
+                %% Admin Flow
+                AdminDash[Admin Dashboard]:::process
+                AdminAssign[Manually Assign to Provider]:::process
+                DbAssigned[(DB Status: ASSIGNED)]:::database
+                
+                %% Provider Flow
+                ProvDash[Provider Dashboard]:::process
+                ProvAccept{Accept Assigned Job?}:::decision
+                DbProgress[(DB Status: IN PROGRESS)]:::database
+                ProvBefore[Capture 'Before' Photo via Live Camera]:::process
+                ProvWork[Perform Home Service]:::process
+                ProvAfter[Capture 'After' Photo & Record Payment]:::process
+                DbCompleted[(DB Status: COMPLETED)]:::database
+                
+                End([End: Job Closed Successfully]):::term
+
+                %% Flow Logic
+                Start --> IsRegistered
+                IsRegistered -- No --> Register --> Login
+                IsRegistered -- Yes --> Login
+                
+                Login --> RoleCheck
+                
+                %% Customer Branch
+                RoleCheck -- "Role: Customer" --> CustBrowse
+                CustBrowse --> CustBook
+                CustBook --> DbPending
+                DbPending --> CustTrack
+                
+                %% Admin Branch
+                DbPending -. "Real-Time Sub" .-> AdminDash
+                RoleCheck -- "Role: Admin" --> AdminDash
+                AdminDash --> AdminAssign
+                AdminAssign --> DbAssigned
+                
+                %% Provider Branch
+                DbAssigned -. "Real-Time Sub" .-> ProvDash
+                RoleCheck -- "Role: Provider" --> ProvDash
+                ProvDash --> ProvAccept
+                
+                ProvAccept -- "No (Reject)" --> DbPending
+                ProvAccept -- "Yes (Accept)" --> DbProgress
+                
+                DbProgress -. "Live Update" .-> CustTrack
+                
+                DbProgress --> ProvBefore
+                ProvBefore --> ProvWork
+                ProvWork --> ProvAfter
+                ProvAfter --> DbCompleted
+                
+                DbCompleted -. "Live Update & Receipt" .-> CustTrack
+                DbCompleted --> End
+        </div>
+    </div>
+
+
+    <h2>2. System Architecture Block Diagram</h2>
+    <div class="container">
+        <div class="mermaid">
+            graph TD
+                classDef client fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#0f172a,font-weight:bold
+                classDef backend fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#0f172a,font-weight:bold
+                classDef external fill:#fefce8,stroke:#eab308,stroke-width:2px,color:#0f172a,font-weight:bold
+
+                subgraph Frontend [📱 Client Layer - React + Tailwind UI]
+                    C[Customer Portal]:::client
+                    P[Provider Portal]:::client
+                    A[Admin Dashboard]:::client
+                end
+
+                subgraph Backend [⚡ Serverless Backend - Supabase]
+                    Auth[Auth Module]:::backend
+                    DB[(PostgreSQL Database)]:::backend
+                    Storage[Storage Buckets]:::backend
+                    Realtime((Realtime Engine)):::backend
+                    EdgeFn[Edge Functions]:::backend
+                end
+
+                subgraph External [🌐 External Services]
+                    Gemini[Google Gemini API]:::external
+                end
+
+                %% Connections
+                C & P & A -->|Log in / Token| Auth
+                C <-->|Request Service| DB
+                A <-->|Assign Jobs| DB
+                P <-->|Manage Jobs| DB
+                
+                P -->|HTML5 Camera Photos| Storage
+                Storage -.->|Image URLs| DB
+                
+                C <-->|Prompts| EdgeFn
+                EdgeFn <-->|Generates AI Response| Gemini
+                
+                DB -.->|Pushes Changes| Realtime
+                Realtime -.->|Sync UI| C
+                Realtime -.->|Sync UI| P
+                Realtime -.->|Sync UI| A
+        </div>
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>
