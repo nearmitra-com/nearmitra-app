@@ -19,7 +19,7 @@ export interface DbUser {
   phone?: string;
   password?: string;
   role: 'admin' | 'provider' | 'customer';
-  user_metadata?: Record<string, any>;
+  user_metadata?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -34,6 +34,12 @@ export interface DbProviderProfile {
   rating: number;
   completed_jobs: number;
   address: string;
+  latitude?: number;
+  longitude?: number;
+  service_radius_km?: number;
+  experience_years?: number;
+  hourly_rate?: number;
+  avatar_url?: string;
   created_at: string;
 }
 
@@ -44,6 +50,8 @@ export interface DbBooking {
   customer_phone: string;
   service_id: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   description?: string | null;
   preferred_time?: string | null;
   status: 'pending' | 'pending_provider' | 'accepted' | 'in_progress' | 'reached_site' | 'completed' | 'cancelled' | 'rejected';
@@ -247,7 +255,13 @@ export const INITIAL_PROFILES: DbProviderProfile[] = [
     is_available: true,
     rating: 4.9,
     completed_jobs: 142,
-    address: 'Shop 4, Market Road, Sector 12, Mumbai',
+    address: 'Shop 4, Linking Road, Bandra West, Mumbai',
+    latitude: 19.0596,
+    longitude: 72.8295,
+    service_radius_km: 15,
+    experience_years: 6,
+    hourly_rate: 299,
+    avatar_url: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&auto=format&fit=crop&q=80',
     created_at: '2026-01-01T00:00:00.000Z',
   },
   {
@@ -260,8 +274,128 @@ export const INITIAL_PROFILES: DbProviderProfile[] = [
     is_available: true,
     rating: 4.8,
     completed_jobs: 98,
-    address: 'Near Metro Station, Line 2, Pune',
+    address: 'Veera Desai Road, Andheri West, Mumbai',
+    latitude: 19.1363,
+    longitude: 72.8277,
+    service_radius_km: 12,
+    experience_years: 5,
+    hourly_rate: 249,
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     created_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'profile-provider-3',
+    user_id: 'provider-demo-3',
+    full_name: 'Amit Kumar Gupta',
+    phone: '9876543212',
+    skills: ['AC Repair & Service', 'Electrician'],
+    is_approved: true,
+    is_available: true,
+    rating: 4.95,
+    completed_jobs: 215,
+    address: 'Hiranandani Gardens, Powai, Mumbai',
+    latitude: 19.1176,
+    longitude: 72.9060,
+    service_radius_km: 18,
+    experience_years: 8,
+    hourly_rate: 349,
+    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    created_at: '2026-01-02T00:00:00.000Z',
+  },
+  {
+    id: 'profile-provider-4',
+    user_id: 'provider-demo-4',
+    full_name: 'Anita Shinde',
+    phone: '9876543213',
+    skills: ['House Maid', 'Deep Cleaning'],
+    is_approved: true,
+    is_available: true,
+    rating: 4.85,
+    completed_jobs: 178,
+    address: 'Prabhadevi, Dadar, Mumbai',
+    latitude: 19.0178,
+    longitude: 72.8478,
+    service_radius_km: 10,
+    experience_years: 4,
+    hourly_rate: 199,
+    avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    created_at: '2026-01-03T00:00:00.000Z',
+  },
+  {
+    id: 'profile-provider-5',
+    user_id: 'provider-demo-5',
+    full_name: 'Rajesh Verma',
+    phone: '9876543214',
+    skills: ['Painter', 'Carpenter'],
+    is_approved: true,
+    is_available: true,
+    rating: 4.7,
+    completed_jobs: 84,
+    address: 'Kurla Complex, BKC, Mumbai',
+    latitude: 19.0680,
+    longitude: 72.8687,
+    service_radius_km: 15,
+    experience_years: 7,
+    hourly_rate: 279,
+    avatar_url: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    created_at: '2026-01-04T00:00:00.000Z',
+  },
+  {
+    id: 'profile-provider-6',
+    user_id: 'provider-demo-6',
+    full_name: 'Vikram Kamble',
+    phone: '9876543215',
+    skills: ['Plumber', 'Electrician'],
+    is_approved: true,
+    is_available: true,
+    rating: 4.9,
+    completed_jobs: 130,
+    address: 'Gokhale Road, Thane West, Maharashtra',
+    latitude: 19.2183,
+    longitude: 72.9781,
+    service_radius_km: 20,
+    experience_years: 6,
+    hourly_rate: 249,
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    created_at: '2026-01-05T00:00:00.000Z',
+  },
+  {
+    id: 'profile-provider-7',
+    user_id: 'provider-demo-7',
+    full_name: 'Ganesh Deshmukh',
+    phone: '9876543216',
+    skills: ['Electrician', 'Plumber'],
+    is_approved: true,
+    is_available: true,
+    rating: 4.88,
+    completed_jobs: 112,
+    address: 'FC Road, Shivajinagar, Pune',
+    latitude: 18.5314,
+    longitude: 73.8446,
+    service_radius_km: 15,
+    experience_years: 5,
+    hourly_rate: 229,
+    avatar_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    created_at: '2026-01-06T00:00:00.000Z',
+  },
+  {
+    id: 'profile-provider-8',
+    user_id: 'provider-demo-8',
+    full_name: 'Sunil Jadhav',
+    phone: '9876543217',
+    skills: ['AC Repair & Service', 'Deep Cleaning'],
+    is_approved: true,
+    is_available: true,
+    rating: 4.92,
+    completed_jobs: 164,
+    address: 'Phase 1, Hinjewadi IT Park, Pune',
+    latitude: 18.5913,
+    longitude: 73.7389,
+    service_radius_km: 18,
+    experience_years: 7,
+    hourly_rate: 329,
+    avatar_url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    created_at: '2026-01-07T00:00:00.000Z',
   },
 ];
 
@@ -274,6 +408,8 @@ export const INITIAL_BOOKINGS: DbBooking[] = [
     service_id: 'serv-electrician',
     status: 'pending_provider',
     address: 'Flat 402, Green Valley Apartments, Mumbai',
+    latitude: 19.0657,
+    longitude: 72.8687,
     assigned_provider_id: 'profile-provider-1',
     description: 'Switch sparking and ceiling fan making humming noise',
     preferred_time: 'Tomorrow 10:00 AM',
@@ -290,6 +426,8 @@ export const INITIAL_BOOKINGS: DbBooking[] = [
     service_id: 'serv-ac',
     status: 'in_progress',
     address: 'Flat 402, Green Valley Apartments, Mumbai',
+    latitude: 19.0657,
+    longitude: 72.8687,
     assigned_provider_id: 'profile-provider-1',
     description: 'AC cooling issue and filter cleaning in bedroom',
     preferred_time: 'Today 2:00 PM',
@@ -307,6 +445,8 @@ export const INITIAL_BOOKINGS: DbBooking[] = [
     service_id: 'serv-plumber',
     status: 'completed',
     address: 'Flat 402, Green Valley Apartments, Mumbai',
+    latitude: 19.0657,
+    longitude: 72.8687,
     assigned_provider_id: 'profile-provider-2',
     description: 'Kitchen sink pipe blockage and tap leakage',
     preferred_time: 'Yesterday 11:00 AM',
@@ -366,6 +506,27 @@ class LocalDatabase {
         const parsed = JSON.parse(raw);
         // Ensure all required arrays are present and have services
         if (parsed.services && parsed.services.length > 0) {
+          // Ensure providers have coordinates and merge new demo providers
+          if (parsed.provider_profiles && Array.isArray(parsed.provider_profiles)) {
+            parsed.provider_profiles = parsed.provider_profiles.map((p: DbProviderProfile) => {
+              const initMatch = INITIAL_PROFILES.find((ip) => ip.id === p.id);
+              if (p.latitude === undefined || p.latitude === null) {
+                if (initMatch) {
+                  return { ...p, latitude: initMatch.latitude, longitude: initMatch.longitude, service_radius_km: initMatch.service_radius_km || 15 };
+                }
+                return { ...p, latitude: 19.0760, longitude: 72.8777, service_radius_km: 15 };
+              }
+              return p;
+            });
+
+            // Merge any missing initial profiles
+            const existingIds = new Set(parsed.provider_profiles.map((p: DbProviderProfile) => p.id));
+            for (const initP of INITIAL_PROFILES) {
+              if (!existingIds.has(initP.id)) {
+                parsed.provider_profiles.push(initP);
+              }
+            }
+          }
           return parsed;
         }
       }

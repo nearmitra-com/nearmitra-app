@@ -122,7 +122,7 @@ const ProviderLogin = () => {
         if (data && data.length > 0) {
           setServices(data);
         } else {
-          import('@/lib/localDb').then(({ INITIAL_SERVICES }) => setServices(INITIAL_SERVICES as any));
+          import('@/lib/localDb').then(({ INITIAL_SERVICES }) => setServices(INITIAL_SERVICES as unknown as Service[]));
         }
       });
   }, []);

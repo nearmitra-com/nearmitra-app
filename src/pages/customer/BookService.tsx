@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertCircle, Loader2, Image, X, ArrowRight, Copy, Check, Calendar, MapPin, Phone, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Image, X, ArrowRight, Copy, Check, Calendar, MapPin, Phone, ShieldCheck, Navigation } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { LocationPickerModal } from '@/components/LocationPickerModal';
+import { reverseGeocode, GeoLocation, getUserDeviceLocation } from '@/lib/geoUtils';
 
 interface Service {
   id: string;
@@ -13,6 +15,7 @@ interface Service {
   name_hi: string;
   name_mr: string;
   starting_price: number;
+  category?: string;
 }
 
 const BookService = () => {
@@ -23,6 +26,10 @@ const BookService = () => {
   const serviceParam = searchParams.get('service') || '';
   const taskParam = searchParams.get('task') || searchParams.get('desc') || '';
   const addressParam = searchParams.get('address') || '';
+  const providerIdParam = searchParams.get('providerId') || '';
+  const providerNameParam = searchParams.get('providerName') || '';
+  const latParam = searchParams.get('lat') || '';
+  const lngParam = searchParams.get('lng') || '';
 
   const { signIn } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
@@ -31,6 +38,14 @@ const BookService = () => {
   const [createdBookingId, setCreatedBookingId] = useState<string>('');
   const [createdServiceObj, setCreatedServiceObj] = useState<Service | null>(null);
   const [copiedId, setCopiedId] = useState(false);
+
+  const [selectedProvider, setSelectedProvider] = useState<{ id: string; name: string } | null>(
+    providerIdParam ? { id: providerIdParam, name: providerNameParam || 'Verified Specialist' } : null
+  );
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [coords, setCoords] = useState<GeoLocation | null>(
+    latParam && lngParam ? { lat: Number(latParam), lng: Number(lngParam) } : null
+  );
 
   const [formData, setFormData] = useState({
     name: '',
@@ -46,6 +61,24 @@ const BookService = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+
+  const handleAutoDetectLocation = async () => {
+    setIsDetectingGps(true);
+    toast.info('Detecting your live device location...');
+    try {
+      const loc = await getUserDeviceLocation();
+      const addr = loc.address || loc.label || `Location (${loc.lat}, ${loc.lng})`;
+      setFormData((prev) => ({ ...prev, address: addr }));
+      setCoords(loc);
+      toast.success(`Address auto-filled: ${loc.label || addr}`);
+    } catch (err) {
+      console.warn('GPS detection error:', err);
+      toast.error('Could not get GPS coordinates. Please use Pick on Map.');
+    } finally {
+      setIsDetectingGps(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -93,7 +126,7 @@ const BookService = () => {
       if (serviceParam) {
         const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
         const pNorm = normalize(serviceParam);
-        const matched = dataList.find((s: any) =>
+        const matched = dataList.find((s: Service) =>
           s.id === serviceParam ||
           normalize(s.id) === pNorm ||
           normalize(s.name_en) === pNorm ||
@@ -199,18 +232,26 @@ const BookService = () => {
     const selectedServiceObj = services.find(s => s.id === formData.service);
     const serviceName = selectedServiceObj?.name_en || '';
 
-    let matchedProvider = allProfiles.find(p =>
-      p.is_available && p.skills.some(skill =>
-        serviceName.toLowerCase().includes(skill.toLowerCase()) ||
-        skill.toLowerCase().includes(serviceName.toLowerCase())
-      )
-    );
+    let matchedProvider = null;
+    if (selectedProvider) {
+      matchedProvider = allProfiles.find(p => p.id === selectedProvider.id) || null;
+    }
+    if (!matchedProvider) {
+      matchedProvider = allProfiles.find(p =>
+        p.is_available && p.skills.some(skill =>
+          serviceName.toLowerCase().includes(skill.toLowerCase()) ||
+          skill.toLowerCase().includes(serviceName.toLowerCase())
+        )
+      );
+    }
     if (!matchedProvider && allProfiles.length > 0) {
       matchedProvider = allProfiles[0];
     }
 
     const customerId = user?.id || 'customer-demo-1';
     const bookingId = `BK-${Math.floor(100000 + Math.random() * 900000)}`;
+    const effectiveLat = coords?.lat ?? getSavedCustomerLocation().lat;
+    const effectiveLng = coords?.lng ?? getSavedCustomerLocation().lng;
 
     const { error: insertError } = await supabase
       .from('bookings')
@@ -221,6 +262,8 @@ const BookService = () => {
         customer_phone: formData.phone,
         service_id: formData.service,
         address: formData.address,
+        latitude: effectiveLat,
+        longitude: effectiveLng,
         description: formData.description || null,
         preferred_time: formData.time || 'Earliest Available (30-45m)',
         status: 'pending_provider',
@@ -543,16 +586,63 @@ const BookService = () => {
                   )}
                 </div>
 
+                {/* Selected Provider Banner if chosen from /nearby */}
+                {selectedProvider && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 flex items-center justify-between text-xs text-foreground">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold flex-shrink-0">
+                        <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-foreground flex items-center gap-1.5">
+                          Direct Dispatch Request: <span className="text-emerald-600 dark:text-emerald-400">{selectedProvider.name}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          This booking will be routed with priority directly to this verified specialist.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider(null)}
+                      className="text-muted-foreground hover:text-foreground text-[11px] underline ml-2 whitespace-nowrap"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
                 {/* Address */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">
-                    {t('yourAddress')} <span className="text-destructive">*</span>
-                  </label>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <label className="text-sm font-medium text-foreground">
+                      {t('yourAddress')} <span className="text-destructive">*</span>
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleAutoDetectLocation}
+                        disabled={isDetectingGps}
+                        className="text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md"
+                      >
+                        <Navigation className={`w-3 h-3 ${isDetectingGps ? 'animate-spin' : ''}`} />
+                        {isDetectingGps ? 'Detecting...' : 'Detect GPS'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsMapModalOpen(true)}
+                        className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-md"
+                      >
+                        <MapPin className="w-3 h-3" />
+                        Pick on Map
+                      </button>
+                    </div>
+                  </div>
                   <textarea
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none min-h-[100px] resize-none text-sm"
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none min-h-[90px] resize-none text-sm"
                     placeholder="Flat No, Building, Street, Area, City..."
                   />
                 </div>
@@ -690,6 +780,19 @@ const BookService = () => {
           </div>
         </div>
       </div>
+      {/* Location Picker Modal */}
+      <LocationPickerModal
+        open={isMapModalOpen}
+        onOpenChange={setIsMapModalOpen}
+        initialCoords={coords || undefined}
+        onLocationSelect={(selectedLoc) => {
+          if (selectedLoc.address) {
+            setFormData((prev) => ({ ...prev, address: selectedLoc.address || '' }));
+          }
+          setCoords(selectedLoc);
+          toast.success('Doorstep location confirmed from map pin!');
+        }}
+      />
     </div>
   );
 };

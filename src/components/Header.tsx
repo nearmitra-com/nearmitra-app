@@ -39,6 +39,7 @@ export const Header = () => {
   const navLinks = [
     { to: '/', label: t('home') },
     { to: '/services', label: t('services') },
+    { to: '/nearby', label: 'Nearby Pros', isLive: true },
     { to: '/book', label: t('bookService') },
     { to: '/track', label: t('trackBooking') },
     { to: role === 'provider' ? '/provider' : '/provider-login', label: role === 'provider' ? 'Provider Dashboard' : 'Partner Portal' },
@@ -78,12 +79,18 @@ export const Header = () => {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${isActive(link.to)
+                className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-1.5 ${isActive(link.to)
                   ? 'text-primary bg-primary/8'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                   }`}
               >
-                {link.label}
+                <span>{link.label}</span>
+                {link.isLive && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                )}
                 {isActive(link.to) && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-primary rounded-full" />
                 )}

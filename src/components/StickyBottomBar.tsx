@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Wrench, Plus, Package, User } from 'lucide-react';
+import { Home, Wrench, Plus, Package, MapPin } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const tabs = [
   { to: '/', icon: Home, label: 'Home', labelHi: 'होम', labelMr: 'होम' },
-  { to: '/services', icon: Wrench, label: 'Services', labelHi: 'सेवाएं', labelMr: 'सेवा' },
+  { to: '/nearby', icon: MapPin, label: 'Nearby', labelHi: 'आस-पास', labelMr: 'जवळचे' },
   { to: '/book', icon: Plus, label: 'Book', labelHi: 'बुक करें', labelMr: 'बुक करा', isCenter: true },
+  { to: '/services', icon: Wrench, label: 'Services', labelHi: 'सेवाएं', labelMr: 'सेवा' },
   { to: '/track', icon: Package, label: 'Bookings', labelHi: 'बुकिंग', labelMr: 'बुकिंग' },
-  { to: '/login', icon: User, label: 'Account', labelHi: 'अकाउंट', labelMr: 'अकाउंट' },
 ];
 
 export const StickyBottomBar = () => {

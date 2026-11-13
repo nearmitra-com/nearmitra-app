@@ -57,10 +57,10 @@ const CustomerSignup = () => {
                 toast.error("Signup failed. Please try again.");
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             clearTimeout(timeoutId);
             console.error("Signup error details:", err);
-            const msg = err?.message || "An unexpected error occurred.";
+            const msg = (err as Error)?.message || "An unexpected error occurred.";
             if (msg === 'Failed to fetch') {
                 toast.error("Network error. Please check your connection or disable any ad-blockers.");
             } else if (msg.toLowerCase().includes('already registered')) {

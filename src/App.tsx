@@ -24,6 +24,7 @@ import CustomerSignup from "./pages/customer/CustomerSignup";
 import PrivacyPolicy from "./pages/public/PrivacyPolicy";
 import TermsOfService from "./pages/public/TermsOfService";
 import NotFound from "./pages/public/NotFound";
+import FindNearbyProviders from "./pages/customer/FindNearbyProviders";
 import { QuickRoleSwitcher } from "@/components/QuickRoleSwitcher";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,8 @@ const App = () => (
               {/* Customer Pages */}
               <Route path="/" element={<CustomerLayout><Index /></CustomerLayout>} />
               <Route path="/services" element={<CustomerLayout><Services /></CustomerLayout>} />
+              <Route path="/nearby" element={<CustomerLayout><FindNearbyProviders /></CustomerLayout>} />
+              <Route path="/find-pros" element={<CustomerLayout><FindNearbyProviders /></CustomerLayout>} />
               <Route path="/book" element={<CustomerLayout><BookService /></CustomerLayout>} />
               <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
               <Route path="/track" element={<CustomerLayout><TrackBooking /></CustomerLayout>} />

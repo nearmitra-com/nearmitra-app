@@ -34,6 +34,8 @@ interface Booking {
   before_photo_url?: string | null;
   after_photo_url?: string | null;
   reached_site?: boolean;
+  assigned_provider_id?: string | null;
+  created_at?: string;
 }
 
 interface Service {
@@ -257,7 +259,7 @@ const ProviderDashboard = () => {
       supabase.from('services').select('id,name_en,name_hi,name_mr,starting_price'),
     ]);
 
-    const bookingsList = (allBookings as any[]) || [];
+    const bookingsList = (allBookings as unknown as Booking[]) || [];
     const pId = profile?.id;
 
     // Pending: explicitly assigned to this provider OR general pending requests

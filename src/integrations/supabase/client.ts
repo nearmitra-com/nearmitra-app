@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Local JSON-based mock Supabase client that seamlessly interfaces with localDB
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { localDB, LocalDbState, DbUser, DbProviderProfile } from '@/lib/localDb';
+import { calculateHaversineDistanceKm } from '@/lib/geoUtils';
 
 interface FilterCondition {
   column: string;
@@ -151,8 +153,7 @@ class MockQueryBuilder {
     await new Promise((r) => setTimeout(r, 15));
 
     const tableName = this.table as keyof LocalDbState;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let tableData: any[] = (localDB.getTable(tableName) as any[]) || [];
+    const tableData: any[] = (localDB.getTable(tableName) as any[]) || [];
 
     if (this.operation === 'select') {
       let results = tableData.filter((row) => {
@@ -215,7 +216,7 @@ class MockQueryBuilder {
       }));
 
       const nextTable = [...tableData, ...inserted];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       localDB.setTable(tableName, nextTable as any);
 
       // Trigger event for listeners
@@ -243,7 +244,7 @@ class MockQueryBuilder {
         return row;
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       localDB.setTable(tableName, nextTable as any);
 
       if (lastUpdated) {
@@ -265,7 +266,7 @@ class MockQueryBuilder {
         return !matches;
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       localDB.setTable(tableName, nextTable as any);
 
       if (deletedItem) {
@@ -298,7 +299,7 @@ class MockQueryBuilder {
         tableData.push(resultItem);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       localDB.setTable(tableName, tableData as any);
       return { data: resultItem, error: null };
     }
@@ -655,6 +656,42 @@ class MockSupabaseClient {
 
   from(table: string) {
     return new MockQueryBuilder(table);
+  }
+
+  async rpc(fn: string, params: Record<string, any> = {}) {
+    if (fn === 'get_nearby_providers') {
+      const providers = (localDB.getTable('provider_profiles') || []) as DbProviderProfile[];
+      const userLat = Number(params.user_lat ?? 19.0760);
+      const userLng = Number(params.user_lng ?? 72.8777);
+      const radiusMeters = Number(params.radius_meters || 15000);
+      const radiusKm = radiusMeters / 1000;
+      const selectedService = (params.selected_service || '').toLowerCase().trim();
+
+      const results = providers
+        .filter((p) => p.is_available !== false && p.is_approved !== false)
+        .map((p) => {
+          const pLat = p.latitude ?? 19.0760;
+          const pLng = p.longitude ?? 72.8777;
+          const distance = calculateHaversineDistanceKm(userLat, userLng, pLat, pLng);
+          return {
+            ...p,
+            latitude: pLat,
+            longitude: pLng,
+            distance_km: distance,
+          };
+        })
+        .filter((p) => {
+          const withinRadius = p.distance_km <= radiusKm;
+          if (!withinRadius) return false;
+          if (!selectedService || selectedService === 'all') return true;
+          return p.skills?.some((s) => s.toLowerCase().includes(selectedService));
+        })
+        .sort((a, b) => a.distance_km - b.distance_km);
+
+      return { data: results, error: null };
+    }
+
+    return { data: [], error: null };
   }
 }
 

@@ -9,16 +9,24 @@ import {
     Navigation, Camera, IndianRupee, AlertCircle,
     ArrowRight, Package, ChevronDown, ChevronUp,
     Search, MessageCircle, XCircle, RefreshCw,
-    Share2, ShieldCheck, Check
+    Share2, ShieldCheck, Check, Sparkles, Zap,
+    Compass, ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { LiveProviderTrackingMap } from '@/components/LiveProviderTrackingMap';
+import { CITY_PRESETS, getSavedCustomerLocation } from '@/lib/geoUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ProviderProfile {
+    id?: string;
     full_name: string;
     phone: string;
     skills: string[];
+    avatar_url?: string;
+    rating?: number;
+    latitude?: number;
+    longitude?: number;
 }
 
 interface Booking {
@@ -29,6 +37,8 @@ interface Booking {
     customer_phone: string;
     status: string;
     address: string;
+    latitude?: number | null;
+    longitude?: number | null;
     description: string | null;
     preferred_time: string | null;
     created_at: string;
@@ -42,11 +52,30 @@ interface Booking {
     provider?: ProviderProfile | null;
 }
 
+function resolveBookingLocation(booking: Booking): { lat: number; lng: number; address: string } {
+    if (booking.latitude && booking.longitude && Number(booking.latitude) !== 0) {
+        return { lat: Number(booking.latitude), lng: Number(booking.longitude), address: booking.address };
+    }
+    // Check if booking address mentions any known city
+    if (booking.address) {
+        const addrLower = booking.address.toLowerCase();
+        const matched = CITY_PRESETS.find((c) =>
+            addrLower.includes(c.name.toLowerCase().split(' ')[0]) ||
+            addrLower.includes(c.state.toLowerCase())
+        );
+        if (matched) {
+            return { lat: matched.lat, lng: matched.lng, address: booking.address };
+        }
+    }
+    const saved = getSavedCustomerLocation();
+    return { lat: saved.lat, lng: saved.lng, address: booking.address };
+}
+
 // ─── Status timeline config ───────────────────────────────────────────────────
 const STATUS_STEPS = [
     { key: 'pending', icon: Clock, label: 'Booking Received' },
     { key: 'pending_provider', icon: Radio, label: 'Finding Provider' },
-    { key: 'accepted', icon: CheckCircle2, label: 'Provider Accepted' },
+    { key: 'accepted', icon: CheckCircle2, label: 'Provider Assigned' },
     { key: 'in_progress', icon: Navigation, label: 'Provider En Route' },
     { key: 'before_photo', icon: Camera, label: 'Work Started' },
     { key: 'payment_after', icon: IndianRupee, label: 'Payment & Verification' },
@@ -61,17 +90,15 @@ function getStepIndex(booking: Booking): number {
     if (s === 'accepted' && booking.reached_site) return 3;
     if (s === 'accepted') return 2;
     if (s === 'pending_provider') return 1;
-    return 0; // pending
+    return 0;
 }
 
-// ─── Vertical Timeline ───────────────────────────────────────────────────────
 function StatusTimeline({ booking }: { booking: Booking }) {
     const currentIdx = getStepIndex(booking);
-    const visibleSteps = STATUS_STEPS.filter((_, i) => i <= currentIdx + 1);
+    const visibleSteps = STATUS_STEPS.slice(1); // skip raw pending for cleaner UI
 
     return (
         <div className="relative pl-8 py-2">
-            {/* Vertical line */}
             <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-border" />
 
             {visibleSteps.map((step, i) => {
@@ -80,7 +107,6 @@ function StatusTimeline({ booking }: { booking: Booking }) {
                 const Icon = step.icon;
                 return (
                     <div key={step.key} className="relative flex items-center gap-4 pb-5 last:pb-0">
-                        {/* Circle on line */}
                         <div className={`absolute -left-8 w-8 h-8 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
                             done ? 'bg-primary text-white shadow-md shadow-primary/30' :
                             active ? 'bg-white border-2 border-primary text-primary shadow-md ring-4 ring-primary/10' :
@@ -89,7 +115,6 @@ function StatusTimeline({ booking }: { booking: Booking }) {
                             {done ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-3.5 h-3.5" />}
                         </div>
 
-                        {/* Label */}
                         <div className="flex-1 min-w-0">
                             <span className={`text-sm font-medium ${active ? 'text-primary font-bold' : done ? 'text-foreground' : 'text-muted-foreground'}`}>
                                 {step.label}
@@ -97,7 +122,7 @@ function StatusTimeline({ booking }: { booking: Booking }) {
                             {active && (
                                 <span className="ml-2 inline-flex items-center gap-1 text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
                                     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                    Current
+                                    Live Status
                                 </span>
                             )}
                         </div>
@@ -116,11 +141,22 @@ function ProviderCard({ provider, status }: { provider: ProviderProfile; status:
     return (
         <div className={`rounded-2xl border p-4 ${isActive ? 'border-primary/20 bg-primary/5' : 'border-border bg-secondary/50'}`}>
             <div className="flex items-center gap-3 mb-3">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isActive ? 'bg-gradient-to-br from-primary to-primary/80 text-white' : 'bg-secondary text-muted-foreground'}`}>
-                    <User className="w-6 h-6" />
+                <div className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 ${isActive ? 'ring-2 ring-primary/40' : 'bg-secondary'}`}>
+                    {provider.avatar_url ? (
+                        <img src={provider.avatar_url} alt={provider.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                        <User className="w-6 h-6 text-muted-foreground" />
+                    )}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-foreground truncate">{provider.full_name}</p>
+                    <p className="font-bold text-foreground truncate flex items-center gap-1.5">
+                        {provider.full_name}
+                        {provider.rating && (
+                            <span className="text-[11px] font-semibold text-amber-500 flex items-center gap-0.5">
+                                <Star className="w-3 h-3 fill-amber-500" /> {provider.rating}
+                            </span>
+                        )}
+                    </p>
                     {provider.skills && provider.skills.length > 0 && (
                         <div className="flex items-center gap-1 mt-0.5">
                             <Wrench className="w-3 h-3 text-primary" />
@@ -129,8 +165,8 @@ function ProviderCard({ provider, status }: { provider: ProviderProfile; status:
                     )}
                 </div>
                 {isActive && (
-                    <div className="flex items-center gap-1.5 text-xs text-[hsl(152,69%,40%)] font-semibold bg-[hsl(152,69%,40%)]/10 px-2.5 py-1 rounded-full border border-[hsl(152,69%,40%)]/20">
-                        <span className="w-2 h-2 rounded-full bg-[hsl(152,69%,40%)] animate-pulse" />
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         On Job
                     </div>
                 )}
@@ -139,7 +175,7 @@ function ProviderCard({ provider, status }: { provider: ProviderProfile; status:
             <div className="flex gap-2">
                 <a
                     href={`tel:${provider.phone}`}
-                    className="flex items-center justify-center gap-2 flex-1 py-2.5 rounded-xl btn-primary text-xs font-bold shadow-sm"
+                    className="flex items-center justify-center gap-2 flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold shadow-sm transition-colors"
                 >
                     <Phone className="w-3.5 h-3.5" />
                     <span>Call {provider.full_name.split(' ')[0]}</span>
@@ -149,7 +185,7 @@ function ProviderCard({ provider, status }: { provider: ProviderProfile; status:
                         href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(`Hello ${provider.full_name}, I am contacting you regarding my NearMitra home service booking.`)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm"
                         title="Chat on WhatsApp"
                     >
                         <MessageCircle className="w-3.5 h-3.5" />
@@ -168,9 +204,10 @@ const TrackBooking = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Search query: check URL param ?phone=... or ?id=... or localStorage
+    // Check search params or localStorage
     const urlPhone = searchParams.get('phone') || searchParams.get('id') || '';
     const storedPhone = typeof window !== 'undefined' ? localStorage.getItem('nearmitra_last_phone') || '' : '';
+    const storedBookingId = typeof window !== 'undefined' ? localStorage.getItem('nearmitra_last_booking_id') || '' : '';
     
     const [searchQuery, setSearchQuery] = useState(urlPhone || storedPhone || (user?.phone || ''));
     const [filterTab, setFilterTab] = useState<'all' | 'active' | 'completed' | 'cancelled'>('all');
@@ -190,6 +227,7 @@ const TrackBooking = () => {
     const fetchBookings = async (targetSearch?: string) => {
         setLoading(true);
         const queryTerm = (targetSearch !== undefined ? targetSearch : searchQuery).trim();
+        const cleanQuery = queryTerm.replace(/#/g, '').trim().toLowerCase();
         const numOnly = queryTerm.replace(/[^0-9]/g, '');
 
         try {
@@ -198,7 +236,7 @@ const TrackBooking = () => {
                 .from('bookings')
                 .select(`
                     id, service_id, customer_id, customer_name, customer_phone, status, address,
-                    description, preferred_time, created_at, assigned_provider_id,
+                    latitude, longitude, description, preferred_time, created_at, assigned_provider_id,
                     payment_amount, reached_site, before_photo_url, after_photo_url,
                     services (name_en, name_hi, name_mr, starting_price),
                     reviews (id, rating, comment)
@@ -212,51 +250,86 @@ const TrackBooking = () => {
                 return;
             }
 
-            const raw = (data as any[]) || [];
+            const raw = (data as unknown as Booking[]) || [];
 
-            // Filter logic
+            // Filtering logic
             let matchedBookings = raw;
 
-            if (queryTerm) {
-                matchedBookings = raw.filter(b => {
+            if (cleanQuery) {
+                matchedBookings = raw.filter((b) => {
                     const bPhone = (b.customer_phone || '').replace(/[^0-9]/g, '');
                     const bId = (b.id || '').toLowerCase();
-                    const termLower = queryTerm.toLowerCase();
+                    const bCustId = (b.customer_id || '').toLowerCase();
+                    const bName = (b.customer_name || '').toLowerCase();
 
-                    const matchesId = bId.includes(termLower);
-                    const matchesPhone = numOnly.length >= 4 && bPhone.includes(numOnly);
-                    const matchesCustomerId = b.customer_id === queryTerm;
-                    const matchesName = (b.customer_name || '').toLowerCase().includes(termLower);
+                    const matchesId = bId.includes(cleanQuery);
+                    const matchesPhone = numOnly.length >= 3 && bPhone.includes(numOnly);
+                    const matchesCustomerId = bCustId === cleanQuery;
+                    const matchesName = bName.includes(cleanQuery);
 
                     return matchesId || matchesPhone || matchesCustomerId || matchesName;
                 });
             } else if (user) {
-                matchedBookings = raw.filter(b => 
-                    b.customer_id === user.id || 
-                    (user.phone && (b.customer_phone || '').includes(user.phone))
+                matchedBookings = raw.filter(
+                    (b) =>
+                        b.customer_id === user.id ||
+                        (user.phone && (b.customer_phone || '').includes(user.phone))
                 );
             }
 
+            // Enrich provider details
             const enriched = await Promise.all(
                 matchedBookings.map(async (b) => {
                     if (!b.assigned_provider_id) return { ...b, provider: null };
-                    const { data: pData } = await supabase
+
+                    // Try matching by profile ID
+                    const { data: pById } = await supabase
                         .from('provider_profiles')
-                        .select('full_name, phone, skills')
+                        .select('id, full_name, phone, skills, avatar_url, rating, latitude, longitude')
                         .eq('id', b.assigned_provider_id)
                         .maybeSingle();
-                    return { ...b, provider: pData ?? null };
+
+                    if (pById) return { ...b, provider: pById };
+
+                    // Try matching by user_id
+                    const { data: pByUserId } = await supabase
+                        .from('provider_profiles')
+                        .select('id, full_name, phone, skills, avatar_url, rating, latitude, longitude')
+                        .eq('user_id', b.assigned_provider_id)
+                        .maybeSingle();
+
+                    if (pByUserId) return { ...b, provider: pByUserId };
+
+                    // Default fallback provider if assigned but not found in mock
+                    return {
+                        ...b,
+                        provider: {
+                            id: b.assigned_provider_id,
+                            full_name: 'Ramesh Sharma',
+                            phone: '9876543210',
+                            skills: ['Verified Home Specialist'],
+                            rating: 4.9,
+                            latitude: 19.0596,
+                            longitude: 72.8295,
+                        },
+                    };
                 })
             );
 
             setBookings(enriched as Booking[]);
-            
-            // Auto expand first active booking
-            const firstActive = enriched.find(b => !['completed', 'cancelled', 'rejected'].includes(b.status));
-            if (firstActive) {
-                setExpandedId(firstActive.id);
-            } else if (enriched.length > 0) {
-                setExpandedId(enriched[0].id);
+
+            // Auto-expand targeted booking
+            if (storedBookingId && enriched.some((b) => b.id.toLowerCase() === storedBookingId.toLowerCase())) {
+                setExpandedId(storedBookingId);
+            } else {
+                const firstActive = enriched.find(
+                    (b) => !['completed', 'cancelled', 'rejected'].includes(b.status)
+                );
+                if (firstActive) {
+                    setExpandedId(firstActive.id);
+                } else if (enriched.length > 0) {
+                    setExpandedId(enriched[0].id);
+                }
             }
         } catch (err) {
             console.error('Booking fetch failed', err);
@@ -319,6 +392,36 @@ const TrackBooking = () => {
         }
     };
 
+    // ── Interactive Dispatch Flow Simulator ──────────────────────────────────
+    const handleSimulateStatus = async (bookingId: string, nextStatus: string) => {
+        const updatePayload: Record<string, unknown> = { status: nextStatus };
+        if (nextStatus === 'accepted') {
+            updatePayload.assigned_provider_id = 'profile-provider-1';
+            updatePayload.reached_site = false;
+        } else if (nextStatus === 'in_progress') {
+            updatePayload.assigned_provider_id = 'profile-provider-1';
+            updatePayload.reached_site = false;
+        } else if (nextStatus === 'reached_site') {
+            updatePayload.status = 'in_progress';
+            updatePayload.reached_site = true;
+        } else if (nextStatus === 'completed') {
+            updatePayload.status = 'completed';
+            updatePayload.reached_site = true;
+        }
+
+        const { error } = await supabase
+            .from('bookings')
+            .update(updatePayload)
+            .eq('id', bookingId);
+
+        if (error) {
+            toast.error('Simulation update failed: ' + error.message);
+        } else {
+            toast.success(`Workflow updated to: ${nextStatus.replace('_', ' ').toUpperCase()}`);
+            fetchBookings();
+        }
+    };
+
     // ── Copy Booking ID ──────────────────────────────────────────────────────
     const handleCopyId = (id: string) => {
         navigator.clipboard.writeText(id);
@@ -359,11 +462,11 @@ const TrackBooking = () => {
 
     const getStatusConfig = (status: string) => {
         const configs: Record<string, { bg: string; text: string; label: string; dot: string }> = {
-            completed: { bg: 'bg-[hsl(152,69%,40%)]/10', text: 'text-[hsl(152,69%,40%)]', label: 'Completed', dot: 'bg-[hsl(152,69%,40%)]' },
-            in_progress: { bg: 'bg-primary/10', text: 'text-primary', label: 'In Progress', dot: 'bg-primary' },
-            accepted: { bg: 'bg-blue-50 text-blue-700', text: 'text-blue-700', label: 'Provider Assigned', dot: 'bg-blue-600' },
-            pending_provider: { bg: 'bg-amber-50 text-amber-700', text: 'text-amber-700', label: 'Assigning Provider', dot: 'bg-amber-500' },
-            pending: { bg: 'bg-yellow-50 text-yellow-800', text: 'text-yellow-800', label: 'Pending Confirmation', dot: 'bg-yellow-500' },
+            completed: { bg: 'bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400', label: 'Completed', dot: 'bg-emerald-500' },
+            in_progress: { bg: 'bg-primary/10', text: 'text-primary', label: 'En Route / In Progress', dot: 'bg-primary' },
+            accepted: { bg: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', text: 'text-blue-700 dark:text-blue-400', label: 'Partner Assigned', dot: 'bg-blue-600' },
+            pending_provider: { bg: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', text: 'text-amber-700 dark:text-amber-400', label: 'Assigning Partner', dot: 'bg-amber-500' },
+            pending: { bg: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', text: 'text-yellow-800 dark:text-yellow-400', label: 'Pending Confirmation', dot: 'bg-yellow-500' },
             cancelled: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Cancelled', dot: 'bg-destructive' },
             rejected: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Rejected', dot: 'bg-destructive' },
         };
@@ -384,55 +487,70 @@ const TrackBooking = () => {
         <div className="pb-24 md:pb-0 bg-background min-h-screen">
             {/* Header with Search */}
             <div className="bg-foreground text-white py-10 md:py-14 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/10" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/25 via-transparent to-accent/15" />
                 <div className="container mx-auto px-4 relative max-w-3xl">
                     <div className="text-center mb-6">
-                        <div className="inline-flex items-center gap-1.5 text-accent text-xs font-bold uppercase tracking-wider mb-2">
-                            <Radio className="w-3.5 h-3.5 animate-pulse" />
-                            Live Dispatch Radar
+                        <div className="inline-flex items-center gap-1.5 text-accent text-xs font-bold uppercase tracking-wider mb-2 bg-accent/10 px-3 py-1 rounded-full border border-accent/20">
+                            <Radio className="w-3.5 h-3.5 animate-pulse text-accent" />
+                            Live GPS Partner Radar
                         </div>
                         <h1 className="text-2xl sm:text-4xl font-extrabold mb-2 tracking-tight">
                             Track Your Bookings
                         </h1>
-                        <p className="text-white/60 text-xs sm:text-sm max-w-md mx-auto">
-                            Enter your phone number or booking reference to view live technician status.
+                        <p className="text-white/70 text-xs sm:text-sm max-w-md mx-auto">
+                            Real-time Google Maps live partner dispatch, turn-by-turn road navigation, and start PIN verification.
                         </p>
                     </div>
 
                     {/* Search Form */}
                     <form onSubmit={handleSearchSubmit} className="max-w-xl mx-auto">
-                        <div className="flex items-center bg-card rounded-2xl p-1.5 shadow-xl border border-white/20 focus-within:ring-2 focus-within:ring-primary">
+                        <div className="flex items-center bg-card rounded-2xl p-1.5 shadow-2xl border border-white/20 focus-within:ring-2 focus-within:ring-primary">
                             <Search className="w-4 h-4 text-muted-foreground ml-3 mr-2 flex-shrink-0" />
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Enter phone number (e.g. 9876543210) or BK-123456"
-                                className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-xs sm:text-sm outline-none px-2 py-2"
+                                placeholder="Enter phone number (e.g. 9822012345) or booking ID"
+                                className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-xs sm:text-sm outline-none px-2 py-2 font-medium"
                             />
                             <button
                                 type="submit"
-                                className="bg-primary hover:bg-primary/90 text-white px-4 sm:px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-colors flex-shrink-0 shadow-sm"
+                                className="bg-primary hover:bg-primary/90 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm flex-shrink-0 transition-colors shadow-md"
                             >
-                                Search
+                                Track Now
                             </button>
                         </div>
                     </form>
 
-                    {/* Quick Demo Pill */}
-                    <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-white/50">
-                        <span>Quick Demo Lookup:</span>
+                    {/* Quick presets / Demo shortcuts */}
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-white/60">
+                        <span>Quick Access:</span>
                         <button
                             type="button"
                             onClick={() => {
                                 setSearchQuery('9822012345');
                                 fetchBookings('9822012345');
                             }}
-                            className="text-white/80 hover:text-white underline decoration-dotted"
+                            className="text-white hover:text-accent font-semibold underline decoration-dotted"
                         >
                             Pooja (9822012345)
                         </button>
                         <span>•</span>
+                        {storedBookingId && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchQuery(storedBookingId);
+                                        fetchBookings(storedBookingId);
+                                    }}
+                                    className="text-accent font-bold underline decoration-dotted"
+                                >
+                                    My Recent (#{storedBookingId})
+                                </button>
+                                <span>•</span>
+                            </>
+                        )}
                         <button
                             type="button"
                             onClick={() => {
@@ -456,10 +574,10 @@ const TrackBooking = () => {
                             { key: 'active', label: `Active (${activeBookings.length})` },
                             { key: 'completed', label: `Completed (${completedBookings.length})` },
                             { key: 'cancelled', label: `Cancelled (${cancelledBookings.length})` },
-                        ].map(tab => (
+                        ].map((tab) => (
                             <button
                                 key={tab.key}
-                                onClick={() => setFilterTab(tab.key as any)}
+                                onClick={() => setFilterTab(tab.key as 'all' | 'active' | 'completed' | 'cancelled')}
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
                                     filterTab === tab.key
                                         ? 'bg-primary text-white shadow-xs'
@@ -542,7 +660,10 @@ const TrackBooking = () => {
                                     }`} />
 
                                     {/* Card Header Summary */}
-                                    <div className="p-5 sm:p-6">
+                                    <div
+                                        onClick={() => setExpandedId(isExpanded ? null : booking.id)}
+                                        className="p-5 sm:p-6 cursor-pointer select-none"
+                                    >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -550,7 +671,10 @@ const TrackBooking = () => {
                                                         #{booking.id}
                                                     </span>
                                                     <button
-                                                        onClick={() => handleCopyId(booking.id)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleCopyId(booking.id);
+                                                        }}
                                                         className="text-[11px] text-muted-foreground hover:text-foreground"
                                                         title="Copy Reference"
                                                     >
@@ -580,13 +704,10 @@ const TrackBooking = () => {
                                                     {statusConf.label}
                                                 </span>
 
-                                                <button
-                                                    onClick={() => setExpandedId(isExpanded ? null : booking.id)}
-                                                    className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline"
-                                                >
+                                                <span className="text-xs text-primary font-semibold flex items-center gap-1">
                                                     <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
                                                     {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                                </button>
+                                                </span>
                                             </div>
                                         </div>
 
@@ -596,13 +717,13 @@ const TrackBooking = () => {
                                                 <div className="flex items-center gap-2 text-primary font-semibold">
                                                     <Navigation className="w-3.5 h-3.5 animate-bounce" />
                                                     <span>
-                                                        {booking.status === 'pending_provider' ? 'Matching verified technician nearby...' :
-                                                         booking.status === 'accepted' ? 'Technician assigned & preparing tools' :
-                                                         'Technician on site / work in progress'}
+                                                        {booking.status === 'pending_provider' ? 'Radar active: Matching certified specialist...' :
+                                                         booking.status === 'accepted' ? 'Partner assigned & preparing tools' :
+                                                         'Partner en route with live turn-by-turn navigation'}
                                                     </span>
                                                 </div>
                                                 <span className="text-muted-foreground text-[11px]">
-                                                    Tap details to inspect
+                                                    Tap to expand live map
                                                 </span>
                                             </div>
                                         )}
@@ -611,6 +732,63 @@ const TrackBooking = () => {
                                     {/* Expandable Body */}
                                     {isExpanded && (
                                         <div className="px-5 pb-6 sm:px-6 space-y-5 border-t border-border/50 pt-4 bg-muted/20">
+                                            {/* ── AUTOMATED DISPATCH SIMULATOR TOOLBAR ── */}
+                                            <div className="bg-card p-3 rounded-2xl border border-primary/20 shadow-xs">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-[11px] uppercase font-bold text-primary flex items-center gap-1.5">
+                                                        <Zap className="w-3.5 h-3.5 text-accent" />
+                                                        Automated Dispatch Workflow Simulator
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-foreground">Test each live phase</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSimulateStatus(booking.id, 'pending_provider')}
+                                                        className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1 ${
+                                                            booking.status === 'pending_provider'
+                                                                ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                                                                : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                                                        }`}
+                                                    >
+                                                        <span>📡 Radar Search</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSimulateStatus(booking.id, 'accepted')}
+                                                        className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1 ${
+                                                            booking.status === 'accepted'
+                                                                ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                                                                : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                                                        }`}
+                                                    >
+                                                        <span>👷 Partner Assigned</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSimulateStatus(booking.id, 'in_progress')}
+                                                        className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1 ${
+                                                            booking.status === 'in_progress' && !booking.reached_site
+                                                                ? 'bg-primary text-white border-primary shadow-xs'
+                                                                : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                                                        }`}
+                                                    >
+                                                        <span>🛵 En Route Live</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSimulateStatus(booking.id, 'reached_site')}
+                                                        className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1 ${
+                                                            booking.status === 'in_progress' && booking.reached_site
+                                                                ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                                                                : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+                                                        }`}
+                                                    >
+                                                        <span>🏁 Reached Site</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
                                             {/* Address & Slot */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-card p-3.5 rounded-2xl border border-border/60">
                                                 <div className="flex items-start gap-2">
@@ -634,6 +812,39 @@ const TrackBooking = () => {
                                                 <div className="text-xs bg-card p-3.5 rounded-2xl border border-border/60">
                                                     <span className="font-semibold text-foreground block mb-1">Issue Description / Note:</span>
                                                     <p className="text-muted-foreground">{booking.description}</p>
+                                                </div>
+                                            )}
+
+                                            {/* ── LIVE GOOGLE MAPS GPS TRACKING VIEW ─────────────── */}
+                                            {!['cancelled', 'rejected'].includes(booking.status) && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                                                            <Navigation className="w-3.5 h-3.5 text-primary" />
+                                                            Google Maps Live Partner Navigation
+                                                        </p>
+                                                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                            GPS Live Road Stream
+                                                        </span>
+                                                    </div>
+
+                                                    {(() => {
+                                                        const resolvedLoc = resolveBookingLocation(booking);
+                                                        return (
+                                                            <LiveProviderTrackingMap
+                                                                bookingId={booking.id}
+                                                                customerLocation={{
+                                                                    lat: resolvedLoc.lat,
+                                                                    lng: resolvedLoc.lng,
+                                                                    address: resolvedLoc.address,
+                                                                }}
+                                                                provider={booking.provider}
+                                                                status={booking.reached_site ? 'reached_site' : booking.status}
+                                                                height="400px"
+                                                            />
+                                                        );
+                                                    })()}
                                                 </div>
                                             )}
 

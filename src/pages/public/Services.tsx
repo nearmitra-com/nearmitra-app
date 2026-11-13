@@ -645,16 +645,28 @@ const Services: React.FC = () => {
 
   // Handle Voice Search Simulation
   const handleVoiceSearch = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
+    interface SpeechRecognitionEvent {
+      results: { [index: number]: { [index: number]: { transcript: string } } };
+    }
+    interface SpeechRecognitionInstance {
+      lang: string;
+      onstart: () => void;
+      onresult: (event: SpeechRecognitionEvent) => void;
+      onerror: () => void;
+      start: () => void;
+    }
+    const SpeechRecognitionClass =
+      (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
+
+    if (SpeechRecognitionClass) {
       try {
-        const recognition = new SpeechRecognition();
+        const recognition = new SpeechRecognitionClass();
         recognition.lang = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-IN';
         recognition.onstart = () => {
           toast.info('🎙️ Listening... Speak your service (e.g. "Ceiling fan" or "Plumber")');
         };
-        recognition.onresult = (event: any) => {
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
           const transcript = event.results[0][0].transcript;
           setSearchQuery(transcript);
           toast.success(`Found results for "${transcript}"`);
@@ -720,12 +732,15 @@ const Services: React.FC = () => {
               </div>
             </button>
 
-            {/* Live Verified Pros Badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-[11px] font-bold shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-              <span className="hidden xs:inline">45+ Pros</span>
-              <span>Available</span>
-            </div>
+            {/* Live Verified Pros Badge -> /nearby */}
+            <Link
+              to="/nearby"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold shadow-xs transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+              <span>Live Radar Map</span>
+              <ArrowRight className="w-3 h-3 ml-0.5" />
+            </Link>
           </div>
 
           {/* Search Box (App-Style Rounded Input) */}
@@ -887,16 +902,16 @@ const Services: React.FC = () => {
         {/* ── FILTER CHIPS & VIEW SWITCHER BAR ─────────────────────────────── */}
         <div className="flex items-center justify-between gap-2 mb-3.5 pt-1">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            {[
+            {([
               { id: 'all', label: 'All' },
               { id: 'popular', label: '🔥 Popular' },
               { id: 'under250', label: '⚡ Under ₹250' },
               { id: 'topRated', label: '⭐ 4.8+ Rated' },
               { id: 'express', label: '⏱️ Express 30m' },
-            ].map((f) => (
+            ] as const).map((f) => (
               <button
                 key={f.id}
-                onClick={() => setActiveFilter(f.id as any)}
+                onClick={() => setActiveFilter(f.id)}
                 className={`text-xs px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap active:scale-95 font-medium ${activeFilter === f.id
                     ? 'bg-foreground text-white border-foreground shadow-xs font-bold'
                     : 'bg-white text-muted-foreground border-border/60 hover:text-foreground hover:bg-slate-50'

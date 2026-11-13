@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { HowItWorks } from '@/components/HowItWorks';
+import { getUserDeviceLocation } from '@/lib/geoUtils';
 
 import electricianImg from '@/assets/service-electrician.jpg';
 import carpenterImg from '@/assets/service-carpenter.jpg';
@@ -268,53 +269,19 @@ const Index = () => {
 
   // Auto-fetch current location on mount
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&zoom=16`,
-            { headers: { 'Accept-Language': 'en' } }
-          );
-          if (!res.ok) throw new Error('Geocoding failed');
-          const data = await res.json();
-          const addr = data.address || {};
-          // Build a friendly location string: suburb/neighbourhood, city
-          const locality =
-            addr.suburb ||
-            addr.neighbourhood ||
-            addr.village ||
-            addr.town ||
-            addr.county ||
-            '';
-          const city =
-            addr.city ||
-            addr.state_district ||
-            addr.state ||
-            '';
-          const display = locality && city
-            ? `${locality}, ${city}`
-            : locality || city || 'Mumbai, Maharashtra';
-          setUserLocation(display);
-          setLocationError(false);
-        } catch {
-          setLocationError(true);
-        } finally {
-          setLocationLoading(false);
+    getUserDeviceLocation()
+      .then((loc) => {
+        if (loc.label || loc.address) {
+          setUserLocation(loc.label || loc.address || 'Your City');
         }
-      },
-      () => {
-        // Permission denied or error
+        setLocationError(false);
+      })
+      .catch(() => {
+        setLocationError(false);
+      })
+      .finally(() => {
         setLocationLoading(false);
-        setLocationError(false); // silently fall back, not an "error" per se
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
-    );
+      });
   }, []);
 
   const getName = (s: typeof SERVICES[0]) =>
@@ -380,10 +347,13 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground bg-secondary/80 px-2.5 py-1 rounded-full">
+              <Link
+                to="/nearby"
+                className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/20 transition-all shadow-xs"
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                18 technicians active
-              </span>
+                <span>Nearby Pros Map ➔</span>
+              </Link>
             </div>
           </div>
 
